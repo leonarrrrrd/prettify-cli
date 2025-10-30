@@ -17,8 +17,8 @@ sys.dont_write_bytecode = True
 
 import msvcrt
 
-from prettify_err import *
-from _styling import (rgb, PRESETS)
+from core.prettify_err import (DATATYPE_ERROR, COORDINATE_ERROR)
+from core._styling import (rgb, PRESETS)
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 #    DEFINITIONS
@@ -37,6 +37,7 @@ type COO = tuple[int,int]                       # -> indicating a set of two-dim
 HISTORY     = []                            # -> stores current menu pages for an eventual 'Return' option
 ESC         = '\033['                       # -> PRESETS._reset
 COLS, ROWS  = os.get_terminal_size()        # -> get the number of columns and rows of the currently active terminal
+STYLES      = ['default', 'double', 'smooth']
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 #    FUNCTIONS
@@ -90,20 +91,28 @@ def key_listener() -> KEY:
         except UnicodeDecodeError: return ''
 def clear() -> int:         os.system('cls' if os.name =='nt' else 'clear') # -> clear terminal
 def move(y,x) -> str:       print(f"{ESC}{y};{x}H", end="")                 # -> move window frame in terminal
-def color(code) -> str:     print(f"{code}", end="")                        # -> change color
 def reset() -> str:         print(PRESETS._reset, end="")                   # -> reset escape sequence (use to go ack to default text after changing color etc...)
 def w(cols, _str) -> int:   return int((cols - len(_str))//2)               # -> use to allign item (horizontal)
-def h(rows, _opt) -> int:   return int((rows - len(_opt)+5)//4)             # -> use to allign item (vertical)
-def print_at(y,x,text) -> str:
+def h(rows, _opt) -> int:   return int((rows - len(_opt)+5)//4)             # -> use to allign item (vertical) 
+
+def _color(code) -> str:     print(f"{code}", end="")                        # -> change color
+def _print_at(y,x,text) -> str:
     """
     Use this to print a line at a specific location in the 
     terminal. Very useful to allign items within the frame.
+    `print_at(y,x,<text>)`
     """
     lines = text.split('\n')                # -> turn text into a list
     #: iterate through list and move each item to the correct location
     for i, line in enumerate(lines):
         move(y + i, x)
         print(line, end="")
+def _styles(_mode) -> list:
+    #:                              0    1    2    3    4    5
+    if _mode == 'default': return ['│', '─', '┌', '└', '┐', '┘']
+    if _mode == 'double':  return ['║', '═', '╔', '╚', '╗', '╝']
+    if _mode == 'smooth':  return ['│', '─', '╭', '╰', '╮', '╯']
+    if _mode != 'default' or _mode != 'double' or _mode != 'smooth': return [_mode]
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 #    CLASSES
@@ -113,18 +122,54 @@ class _id:
     def id_handler(self, id): ...
 
 class cli:
+    POS = tuple
+
     def __init__(self): ...
 
+    def _pos(self, x, y, **kwargs) -> COO | Exception:
+        """
+        This might be unnecessary in the future? Determine position
+        of frame and position it accordingly. 
+        """
+        if kwargs: 
+            _tmpkwarg = list(kwargs.keys())                             # -> FEATURES: move item with certain ID to the position
+            if str(_tmpkwarg[0]).lower() == 'id': return move(y,x)      # -> NOTE: to be edited once the IDs functionality is implemented
+        if type(x) != int or type(y) != int: raise DATATYPE_ERROR('prettify expected type<int> but got '+type(x)+' at _pos(x,y)! Maybe you used the wrong type?')
+        else:
+            if x > ROWS or y > COLS: raise COORDINATE_ERROR('Coordinates in _pos(x,y,**kwargs) exceed terminal size.')
+            else: self.POS = (y,x)
     def _draw_canvas(self, width, height, style, **kwargs) -> SEQ:
         """
         ```cli._draw_canvas(10,15,frame(<inpt>))```
         """
         if kwargs: _tmpkwarg = list(kwargs.keys())                  # -> FEATURES: check id styles
-
-
-    def _pos(self, x, y, **kwargs) -> COO:
-        if kwargs: _tmpkwarg = list(kwargs.keys())                  # -> FEATURES: move item with certain ID to the position
-
-        if str(_tmpkwarg[0]).lower() == 'id': return move(y,x)                            # -> NOTE: to be edited once the IDs functionality is implemented
+        frame_elements = _styles(style[0])                           # -> get frame elements
+        frame_color    = style[1]                                   # -> get frame colors
+        if frame_color == 'default' or frame_color == 'd' or frame_color == None: 
+            frame_color = PRESETS._reset
+        for i in frame_elements: 
+            frame_elements[frame_elements.index(i)] = frame_color + i + PRESETS._reset
+        #: print at the user position
+        #: left part of frame including corners 
+        _print_at(self.POS[0],self.POS[1],
+                 (frame_elements[2]+'\n')+
+                 str((frame_elements[0]+'\n')*int(height))+
+                 (frame_elements[3]+'\n'))
+        #: top part of frame, excluding corners
+        _print_at(self.POS[0],int(self.POS[1])+1,
+                 str((frame_elements[1])*int(width)))
+        #: right part of frame, including corners
+        _print_at(self.POS[0],int(self.POS[1])+1+int(width),
+                 (frame_elements[4]+'\n')+
+                 str((frame_elements[0]+'\n')*int(height))+
+                 (frame_elements[5]+'\n'))
+        #: bottom part of frame, excluding corners
+        _print_at(self.POS[0]+1+int(height), self.POS[1]+1,
+                 str((frame_elements[1])*int(width)))
+    def _write_content(self, text:dict|list, is_iterable:bool) -> SEQ:
+        if is_iterable == True:
+            for i, _opt in enumerate(text):
+                move()
+        elif is_iterable == False: ...
 
 cli = cli()

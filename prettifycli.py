@@ -49,6 +49,4 @@ class prettify:
 
         cli._pos(x, y)
 
-    def content(self, text, is_iterable) -> list:
-        ...
-    
+    def content(self, text, is_iterable) -> list | dict: ...
