@@ -30,14 +30,16 @@ type DEF = tuple[int,int] | tuple[str,str]      # -> indicating how certain argu
 type FUN = function                             # -> defines a function
 type FUL = list[function]                       # -> indicating a list of functions
 type COO = tuple[int,int]                       # -> indicating a set of two-dimensional coordinates (x,y)
+type ITR = list[SEQ]                            # -> indicating an iterable object (options in frame)
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 #    VARIABLES
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 HISTORY     = []                            # -> stores current menu pages for an eventual 'Return' option
 ESC         = '\033['                       # -> PRESETS._reset
-COLS, ROWS  = os.get_terminal_size()        # -> get the number of columns and rows of the currently active terminal
+ROWS, COLS  = os.get_terminal_size()        # -> get the number of columns and rows of the currently active terminal
 STYLES      = ['default', 'double', 'smooth']
+TXT_TYPE    = ['default','header','bottom']
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 #    FUNCTIONS
@@ -94,6 +96,7 @@ def move(y,x) -> str:       print(f"{ESC}{y};{x}H", end="")                 # ->
 def reset() -> str:         print(PRESETS._reset, end="")                   # -> reset escape sequence (use to go ack to default text after changing color etc...)
 def w(cols, _str) -> int:   return int((cols - len(_str))//2)               # -> use to allign item (horizontal)
 def h(rows, _opt) -> int:   return int((rows - len(_opt)+5)//4)             # -> use to allign item (vertical) 
+def center(chars) -> int:   return int((ROWS - len(chars))/2)
 
 def _color(code) -> str:     print(f"{code}", end="")                        # -> change color
 def _print_at(y,x,text) -> str:
@@ -123,6 +126,11 @@ class _id:
 
 class cli:
     POS = tuple
+    TXT = str
+
+    LEN_FRAME = int
+
+    index = 0               # -> current index for iterable objects
 
     def __init__(self): ...
 
@@ -134,14 +142,17 @@ class cli:
         if kwargs: 
             _tmpkwarg = list(kwargs.keys())                             # -> FEATURES: move item with certain ID to the position
             if str(_tmpkwarg[0]).lower() == 'id': return move(y,x)      # -> NOTE: to be edited once the IDs functionality is implemented
-        if type(x) != int or type(y) != int: raise DATATYPE_ERROR('prettify expected type<int> but got '+type(x)+' at _pos(x,y)! Maybe you used the wrong type?')
+        if type(x) != int or type(y) != int: raise DATATYPE_ERROR('prettify expected type<int> but got '+str(type(x))+' at _pos(x,y)! Maybe you used the wrong type?')
         else:
             if x > ROWS or y > COLS: raise COORDINATE_ERROR('Coordinates in _pos(x,y,**kwargs) exceed terminal size.')
             else: self.POS = (y,x)
+
     def _draw_canvas(self, width, height, style, **kwargs) -> SEQ:
         """
         ```cli._draw_canvas(10,15,frame(<inpt>))```
         """
+        self.LEN_FRAME = width
+
         if kwargs: _tmpkwarg = list(kwargs.keys())                  # -> FEATURES: check id styles
         frame_elements = _styles(style[0])                           # -> get frame elements
         frame_color    = style[1]                                   # -> get frame colors
@@ -149,6 +160,8 @@ class cli:
             frame_color = PRESETS._reset
         for i in frame_elements: 
             frame_elements[frame_elements.index(i)] = frame_color + i + PRESETS._reset
+
+        clear()    
         #: print at the user position
         #: left part of frame including corners 
         _print_at(self.POS[0],self.POS[1],
@@ -166,10 +179,37 @@ class cli:
         #: bottom part of frame, excluding corners
         _print_at(self.POS[0]+1+int(height), self.POS[1]+1,
                  str((frame_elements[1])*int(width)))
-    def _write_content(self, text:dict|list, is_iterable:bool) -> SEQ:
+        
+    def _text(self, font, _type, pos) -> SEQ:
+        self._pos(pos[0],pos[1])
+        if _type in TXT_TYPE: self.TXT = _type
+        else: self.TXT = 'default'
+        font = font
+
+    def _write_content(self, text:dict|list, pos:tuple, is_iterable:bool) -> SEQ | ITR:
+        #: iterable items
         if is_iterable == True:
+            #: list items in frame
             for i, _opt in enumerate(text):
-                move()
+                if len(pos) == 2: move(self.POS[0]+i+1+pos[1],self.POS[1]+1+pos[0])             # -> place text into frame
+                else: move(self.POS[0]+i+1,self.POS[1]+1)
+                if i == self.index:                                  # -> iterate through options by increasing index
+                    _color(rgb(137, 222, 144) + "> " + PRESETS._reset)
+                    print(_opt)
+                    reset()
+                else:
+                    print(_opt)                                 # -> print all other options
+            
+            #: engage key listener
+            key = key_listener()
+
+            #: listen to key hits
+            if key == 'UP': self.index = (self.index - 1) % len(text)
+            elif key == 'DOWN': self.index = (self.index + 1) % len(text)
+            elif key in ('ENTER', '\n'):
+                if text[self.index] in text: return text[self.index]
+            elif key.lower() == 'q': exit()
+
         elif is_iterable == False: ...
 
 cli = cli()
