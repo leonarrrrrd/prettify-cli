@@ -37,7 +37,7 @@ type ITR = list[SEQ]                            # -> indicating an iterable obje
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 HISTORY     = []                            # -> stores current menu pages for an eventual 'Return' option
 ESC         = '\033['                       # -> PRESETS._reset
-ROWS, COLS  = os.get_terminal_size()        # -> get the number of columns and rows of the currently active terminal
+COLS, ROWS  = os.get_terminal_size()        # -> get the number of columns and rows of the currently active terminal
 STYLES      = ['default', 'double', 'smooth']
 TXT_TYPE    = ['default','header','bottom']
 
@@ -115,7 +115,7 @@ def _styles(_mode) -> list:
     if _mode == 'default': return ['│', '─', '┌', '└', '┐', '┘']
     if _mode == 'double':  return ['║', '═', '╔', '╚', '╗', '╝']
     if _mode == 'smooth':  return ['│', '─', '╭', '╰', '╮', '╯']
-    if _mode != 'default' or _mode != 'double' or _mode != 'smooth': return [_mode]
+    if _mode != 'default' or _mode != 'double' or _mode != 'smooth': return [_mode for i in range(6)]
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 #    CLASSES
@@ -125,7 +125,7 @@ class _id:
     def id_handler(self, id): ...
 
 class cli:
-    POS = tuple
+    POS = tuple             # -> self.POS = (y,x)
     TXT = str
 
     LEN_FRAME = int
@@ -133,7 +133,7 @@ class cli:
     index = 0               # -> current index for iterable objects
 
     def __init__(self): ...
-
+    #: position frame in terminal
     def _pos(self, x, y, **kwargs) -> COO | Exception:
         """
         This might be unnecessary in the future? Determine position
@@ -144,9 +144,9 @@ class cli:
             if str(_tmpkwarg[0]).lower() == 'id': return move(y,x)      # -> NOTE: to be edited once the IDs functionality is implemented
         if type(x) != int or type(y) != int: raise DATATYPE_ERROR('prettify expected type<int> but got '+str(type(x))+' at _pos(x,y)! Maybe you used the wrong type?')
         else:
-            if x > ROWS or y > COLS: raise COORDINATE_ERROR('Coordinates in _pos(x,y,**kwargs) exceed terminal size.')
+            if x > COLS or y > ROWS: raise COORDINATE_ERROR('Coordinates in _pos(x,y,**kwargs) exceed terminal size.')
             else: self.POS = (y,x)
-
+    #: print frame at position in terminal
     def _draw_canvas(self, width, height, style, **kwargs) -> SEQ:
         """
         ```cli._draw_canvas(10,15,frame(<inpt>))```
@@ -179,26 +179,30 @@ class cli:
         #: bottom part of frame, excluding corners
         _print_at(self.POS[0]+1+int(height), self.POS[1]+1,
                  str((frame_elements[1])*int(width)))
-        
+    #: questionably useful
     def _text(self, font, _type, pos) -> SEQ:
         self._pos(pos[0],pos[1])
         if _type in TXT_TYPE: self.TXT = _type
         else: self.TXT = 'default'
         font = font
-
+    #: print text in the frame at certain position
     def _write_content(self, text:dict|list, pos:tuple, is_iterable:bool) -> SEQ | ITR:
+        #: check type of text argument
+        if type(text)   == dict: options = list(text.keys())
+        elif type(text) == list: ...
+        else: raise DATATYPE_ERROR('prettify expected type<dict> or type<list> for cli._write_content(text) but received '+str(type(text))+'!')
         #: iterable items
         if is_iterable == True:
             #: list items in frame
-            for i, _opt in enumerate(text):
-                if len(pos) == 2: move(self.POS[0]+i+1+pos[1],self.POS[1]+1+pos[0])             # -> place text into frame
+            for i, _opts in enumerate(text):
+                if len(pos) == 2: move(self.POS[0]+i+1+pos[1],self.POS[1]+1+pos[0])     # -> place text into frame
                 else: move(self.POS[0]+i+1,self.POS[1]+1)
-                if i == self.index:                                  # -> iterate through options by increasing index
+                if i == self.index:                                                     # -> iterate through options by increasing index
                     _color(rgb(137, 222, 144) + "> " + PRESETS._reset)
-                    print(_opt)
+                    print(_opts)
                     reset()
                 else:
-                    print(_opt)                                 # -> print all other options
+                    print(_opts)                                 # -> print all other options
             
             #: engage key listener
             key = key_listener()
@@ -207,6 +211,10 @@ class cli:
             if key == 'UP': self.index = (self.index - 1) % len(text)
             elif key == 'DOWN': self.index = (self.index + 1) % len(text)
             elif key in ('ENTER', '\n'):
+                #: allow to return functions when text is a dictionary
+                if type(text) == dict: 
+                    if options[self.index] in text: return text[options[self.index]]()
+                #: return content elements regardless of type
                 if text[self.index] in text: return text[self.index]
             elif key.lower() == 'q': exit()
 

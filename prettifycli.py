@@ -32,7 +32,7 @@ def __typing(item, __type:object, __var) -> Exception | None:
 class prettify:
     def __init__(self): ...
 
-    def draw_frame(self, width, height, frame_style, frame_col, _id) -> list:
+    def draw_frame(self, width, height, frame_style, frame_col, _id) -> callable[list]:
         __typing(width,int,'prettify.draw_frame(width=<int>)')
         __typing(height,int,'prettify.draw_frame(height=<int>)')
         __typing(frame_style,str,'prettify.draw_frame(frame_style=<str>)')
@@ -43,7 +43,7 @@ class prettify:
 
         cli._draw_canvas(width, height, [frame_style, frame_col])
     
-    def position(self, x, y) -> tuple:
+    def position(self, x, y) -> callable[tuple]:
         __typing(x,int,'prettify.position(x=<int>)')
         __typing(y,int,'prettify.position(y=<int>)')
 
