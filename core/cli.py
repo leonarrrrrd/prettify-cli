@@ -31,6 +31,7 @@ type FUN = function                             # -> defines a function
 type FUL = list[function]                       # -> indicating a list of functions
 type COO = tuple[int,int]                       # -> indicating a set of two-dimensional coordinates (x,y)
 type ITR = list[SEQ]                            # -> indicating an iterable object (options in frame)
+type CMD = str | bytes                          # -> indicating a terminal command executed in os.system()
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 #    VARIABLES
@@ -116,6 +117,7 @@ def _styles(_mode) -> list:
     if _mode == 'double':  return ['║', '═', '╔', '╚', '╗', '╝']
     if _mode == 'smooth':  return ['│', '─', '╭', '╰', '╮', '╯']
     if _mode != 'default' or _mode != 'double' or _mode != 'smooth': return [_mode for i in range(6)]
+def _NoneType() -> None: return None                                        # -> use in selection menu when option isn't linked
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 #    CLASSES
@@ -126,13 +128,66 @@ class _id:
 
 class cli:
     POS = tuple             # -> self.POS = (y,x)
-    TXT = str
+    TXT = str | list
 
     LEN_FRAME = int
+    HI_FRAME  = int
 
     index = 0               # -> current index for iterable objects
 
     def __init__(self): ...
+    #: for the love of god and everything holy, do NOT use these functions!
+    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+    #    PRIVATE CLI FUNCTIONS
+    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+    def __new_terminal(self) -> CMD: os.system('wt new-tab -p "Command Prompt" -d "%cd%" cmd')
+    def __terminal_size(self, cols, rows) -> CMD: os.system('mode con cols='+str(cols)+' lines='+str(rows))
+    def __text(self, content_list:list[tuple]) -> SEQ: return content_list[0], content_list[1], content_list[2]
+    def __call(self, __index, __options, __dict) -> callable:
+        if __options[__index] in __dict: __dict[__options[__index]]()
+        else: ...
+    def __enum(self, text, pos) -> SEQ:
+        #: list items in frame
+        for i, _opts in enumerate(text):
+            if len(pos) == 2: move(self.POS[0]+i+1+pos[1],self.POS[1]+1+pos[0])     # -> place text into frame
+            else: move(self.POS[0]+i+1,self.POS[1]+1)
+            if i == self.index:                                                     # -> iterate through options by increasing index
+                _color(rgb(137, 222, 144) + "> " + PRESETS._reset)
+                print(_opts)
+                reset()
+            else:
+                print(_opts)    
+
+    def __get_key(self, text, options) -> KEY | None | FUN:
+        #: engage key listener
+        key = key_listener()
+
+            #: listen to key hits
+        if key == 'UP': self.index = (self.index - 1) % len(text)
+        elif key == 'DOWN': self.index = (self.index + 1) % len(text)
+        elif key in ('ENTER', '\n'):
+            #: allow to return functions when text is a dictionary
+            if type(text) == dict: self.__call(self.index, options, text)
+            #: return content elements regardless of type
+        elif key.lower() == 'q': exit()
+    def __place_decorators(self, header, regular, bottom, pos) -> SEQ:
+        frame_pad = (self.LEN_FRAME - 2 - len(header[0])) // 2          # -> get padding of frame (distance from frame elements on x-axis)
+        #: place header
+        move(self.POS[0] + 1, self.POS[1] + 1)
+        print(f"{(' ' * frame_pad)+' '}{header[0]}{' ' * (self.LEN_FRAME - 2 - len(header[0]) - frame_pad)}")
+        #: place subtext
+        move(self.POS[0] + self.HI_FRAME + 2, self.POS[1] + 1)
+        print(bottom[0])
+
+        if type(regular[0]) == list:
+            self.__enum(regular[0], pos)
+            self.__get_key(regular[0], '')
+            # if regular[0][self.index] in regular[0]: regular[0][self.index]
+
+        if type(regular[0]) == dict:
+            self.__enum(list(regular[0].keys()), pos)
+            self.__get_key(regular[0], list(regular[0].keys()))
+
     #: position frame in terminal
     def _pos(self, x, y, **kwargs) -> COO | Exception:
         """
@@ -152,6 +207,7 @@ class cli:
         ```cli._draw_canvas(10,15,frame(<inpt>))```
         """
         self.LEN_FRAME = width
+        self.HI_FRAME  = height
 
         if kwargs: _tmpkwarg = list(kwargs.keys())                  # -> FEATURES: check id styles
         frame_elements = _styles(style[0])                           # -> get frame elements
@@ -179,44 +235,25 @@ class cli:
         #: bottom part of frame, excluding corners
         _print_at(self.POS[0]+1+int(height), self.POS[1]+1,
                  str((frame_elements[1])*int(width)))
-    #: questionably useful
-    def _text(self, font, _type, pos) -> SEQ:
-        self._pos(pos[0],pos[1])
-        if _type in TXT_TYPE: self.TXT = _type
-        else: self.TXT = 'default'
-        font = font
     #: print text in the frame at certain position
-    def _write_content(self, text:dict|list, pos:tuple, is_iterable:bool) -> SEQ | ITR:
-        #: check type of text argument
-        if type(text)   == dict: options = list(text.keys())
-        elif type(text) == list: ...
-        else: raise DATATYPE_ERROR('prettify expected type<dict> or type<list> for cli._write_content(text) but received '+str(type(text))+'!')
+    def _write_content(self, text:dict|list|list[tuple], pos:tuple, is_iterable:bool) -> SEQ | ITR:
         #: iterable items
-        if is_iterable == True:
-            #: list items in frame
-            for i, _opts in enumerate(text):
-                if len(pos) == 2: move(self.POS[0]+i+1+pos[1],self.POS[1]+1+pos[0])     # -> place text into frame
-                else: move(self.POS[0]+i+1,self.POS[1]+1)
-                if i == self.index:                                                     # -> iterate through options by increasing index
-                    _color(rgb(137, 222, 144) + "> " + PRESETS._reset)
-                    print(_opts)
-                    reset()
-                else:
-                    print(_opts)                                 # -> print all other options
-            
-            #: engage key listener
-            key = key_listener()
+        if is_iterable == True:                             # -> print all other options
+            if type(text) == dict: 
+                options = list(text.keys())
+                self.__enum(options, pos)
+                return self.__get_key(text, options)
 
-            #: listen to key hits
-            if key == 'UP': self.index = (self.index - 1) % len(text)
-            elif key == 'DOWN': self.index = (self.index + 1) % len(text)
-            elif key in ('ENTER', '\n'):
-                #: allow to return functions when text is a dictionary
-                if type(text) == dict: 
-                    if options[self.index] in text: return text[options[self.index]]()
-                #: return content elements regardless of type
-                if text[self.index] in text: return text[self.index]
-            elif key.lower() == 'q': exit()
+            elif type(text) == list:                    # -> check for text definitions
+                for i in range(len(text)):
+                    if type(text[i]) == tuple:
+                        header, regular, bottom = self.__text(text)          # -> define text types
+                        return self.__place_decorators(header, regular, bottom, pos)
+                    else:
+                        self.__enum(text, pos)
+                        return self.__get_key(text, '')
+            
+            else: raise DATATYPE_ERROR('prettify expected type<dict> or type<list> for cli._write_content(text) but received '+str(type(text))+'!')
 
         elif is_iterable == False: ...
 
