@@ -1,44 +1,51 @@
-"""
-NOTE: currently prettifycli.py isn't really implemented, 
-making the usage only possible through the cli.py module.
-"""
-from core.cli import cli, _NoneType
-from core._styling import rgb, PRESETS
+# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+#    IMPORTS
+# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+from prettifycli import prettify, rgb
+from core._styling import PRESETS
 
-import os
+# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+#    FUNCTIONS
+# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+def function_a(): print('SUCCESS!')
+def function_b(): print('SUCCESS!')
+def function_c(): print('SUCCESS!')
+def function_d(): print('SUCCESS!')
+def function_e(): print('SUCCESS!')
 
-def a(): print('aaa')
-def b(): print('bbb')
-def c(): print('ccc')
-def d(): print('ddd')
-def e(): print('eee')
+# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+#    PRETTIFY CONTENT
+# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+prettify_content   = [
+    'option-1',
+    'option-2',
+    'option-3',
+    'option-4',
+    'option-5'
+]
+prettify_functions = [
+    function_a,
+    function_b,
+    function_c,
+    function_d,
+    function_e
+]
 
-header1 = rgb(255,0,0) + PRESETS.bold + 'test '+rgb(100,255,0)+'header' + PRESETS._reset
-header2 = 'test header'
-header3 = '123456789012345678901234567890123'
+# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+#    PRETTIFY INITIALIZATION
+# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+prettify.position(15,5)
+prettify.iterable_window(True)
 
-content = {
-    'option 1': a,
-    'option 2': b,
-    'option 3': _NoneType,
-    'option 4': d,
-    'option 5': e
-}
-_content = [(header1, 'header'), 
-           (content, 'regular'),
-           (rgb(122, 122, 122) + "Press 'q' to exit!" + PRESETS._reset, 'bottom')]
+prettify.text_padding(10,3)
+prettify.window_header(rgb(255,0,0) + PRESETS.bold + 'test '+rgb(100,255,0)+'header' + PRESETS._reset)
+prettify.window_bottom(rgb(122, 122, 122) + "Press 'q' to exit!" + PRESETS._reset)
 
-__content = [('test header', 'header'), 
-           (['option 1','option 2','option 3','option 4','option 5'], 'regular'),
-           ("Press 'q' to exit!", 'bottom')]
+prettify.add_functions(prettify_functions)
 
-___content = ['option 1','option 2','option 3','option 4','option 5']
-
-
-cols, rows = os.get_terminal_size()
-cli._pos(int((cols-30)/2),1)
-
+# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+#    RUN CLI
+# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 while True:
-    cli._draw_canvas(30,10,['smooth',rgb(153, 222, 144)])
-    # cli._write_content(content, (15,3), True)
-    cli._write_content(_content, (10,3), True)
+    prettify.create_window(40, 20, 'double', rgb(153, 222, 144))
+    prettify.add_content(prettify_content)
