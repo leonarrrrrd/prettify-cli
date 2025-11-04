@@ -171,10 +171,35 @@ class cli:
             #: return content elements regardless of type
         elif key.lower() == 'q': exit()
     def __place_decorators(self, header, regular, bottom, pos) -> SEQ:
-        frame_pad = (self.LEN_FRAME - 2 - len(header[0])) // 2          # -> get padding of frame (distance from frame elements on x-axis)
+        #: when i wrote the code from line 180 to 198 i seem to have been
+        #: in the passenger seat in my own brain. i seem to have written
+        #: fuck-all and i will be doing jack shit to fix this hell of a
+        #: code snippet. this part of the library is just fucked. congrats
+        #: if you found this, you get nothing. don't try to fix it for
+        #: fucks sake.
+        header     = list(header)
+        LEN_HEADER = len(header[0])
+        _HEADER    = header[0] 
+
+        if '\033' in header[0] or '\x1b' in header[0]:
+            nums = ['0','1','2','3','4','5','6','7','8','9']
+
+            clutter   = []
+            start_esc = []
+            end_esc   = []
+
+            for clutter_char in range(len(header[0])): clutter.append(header[0][clutter_char])
+            for chars in range(len(clutter)):
+                if clutter[chars] == '\x1b': start_esc.append(chars)
+                if clutter[chars] == 'm' and clutter[chars-1] in nums: end_esc.append(chars+1)
+            for indices in range(len(start_esc)):
+                header[0]  = header[0].replace(''.join(clutter[start_esc[indices]:end_esc[indices]]),'')
+                LEN_HEADER = len(header[0])
+
+        frame_pad = (self.LEN_FRAME - 2 - LEN_HEADER) // 2          # -> get padding of frame (distance from frame elements on x-axis)
         #: place header
         move(self.POS[0] + 1, self.POS[1] + 1)
-        print(f"{(' ' * frame_pad)+' '}{header[0]}{' ' * (self.LEN_FRAME - 2 - len(header[0]) - frame_pad)}")
+        print(f"{(' ' * frame_pad)+' '}{_HEADER}{' ' * (self.LEN_FRAME - 2 - LEN_HEADER - frame_pad)}")
         #: place subtext
         move(self.POS[0] + self.HI_FRAME + 2, self.POS[1] + 1)
         print(bottom[0])
