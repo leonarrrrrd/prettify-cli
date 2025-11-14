@@ -127,13 +127,16 @@ class _id:
     def id_handler(self, id): ...
 
 class cli:
-    POS = tuple             # -> self.POS = (y,x)
-    TXT = str | list
+    POS  = tuple             # -> self.POS = (y,x)
+    TXT  = str | list
+    _ITR = bool
 
     LEN_FRAME = int
     HI_FRAME  = int
 
     index = 0               # -> current index for iterable objects
+
+    printed = False
 
     def __init__(self): ...
     #: for the love of god and everything holy, do NOT use these functions!
@@ -152,25 +155,25 @@ class cli:
             if len(pos) == 2: move(self.POS[0]+i+1+pos[1],self.POS[1]+1+pos[0])     # -> place text into frame
             else: move(self.POS[0]+i+1,self.POS[1]+1)
             if i == self.index:                                                     # -> iterate through options by increasing index
-                _color(rgb(137, 222, 144) + "> " + PRESETS._reset)
+                _color(rgb(137, 222, 144) + "-> " + PRESETS._reset)
                 print(_opts)
                 reset()
             else:
                 print(_opts)    
 
-    def __get_key(self, text, options) -> KEY | None | FUN:
+    def __get_key(self, text, options, *itr) -> KEY | None | FUN:
         #: engage key listener
         key = key_listener()
-
             #: listen to key hits
         if key == 'UP': self.index = (self.index - 1) % len(text)
         elif key == 'DOWN': self.index = (self.index + 1) % len(text)
         elif key in ('ENTER', '\n'):
-            #: allow to return functions when text is a dictionary
+                #: allow to return functions when text is a dictionary
             if type(text) == dict: self.__call(self.index, options, text)
-            #: return content elements regardless of type
+                #: return content elements regardless of type
         elif key.lower() == 'q': exit()
-    def __place_decorators(self, header, regular, bottom, pos) -> SEQ:
+
+    def __place_decorators(self, header, regular, bottom, pos, itr) -> SEQ:
         #: when i wrote the code from line 180 to 198 i seem to have been
         #: in the passenger seat in my own brain. i seem to have written
         #: fuck-all and i will be doing jack shit to fix this hell of a
@@ -204,14 +207,17 @@ class cli:
         move(self.POS[0] + self.HI_FRAME + 2, self.POS[1] + 1)
         print(bottom[0])
 
-        if type(regular[0]) == list:
+        if itr == False:
+            _print_at(pos[1], pos[0],'\n'.join(regular[0]))
+
+        if type(regular[0]) == list and itr == True:
             self.__enum(regular[0], pos)
-            self.__get_key(regular[0], '')
+            self.__get_key(regular[0], '', True)
             # if regular[0][self.index] in regular[0]: regular[0][self.index]
 
-        if type(regular[0]) == dict:
+        if type(regular[0]) == dict and itr == True:
             self.__enum(list(regular[0].keys()), pos)
-            self.__get_key(regular[0], list(regular[0].keys()))
+            self.__get_key(regular[0], list(regular[0].keys()), True)
 
     #: position frame in terminal
     def _pos(self, x, y, **kwargs) -> COO | Exception:
@@ -230,7 +236,7 @@ class cli:
     def _draw_canvas(self, width, height, style, **kwargs) -> SEQ:
         """
         ```cli._draw_canvas(10,15,frame(<inpt>))```
-        """
+        """ 
         self.LEN_FRAME = width
         self.HI_FRAME  = height
 
@@ -242,7 +248,9 @@ class cli:
         for i in frame_elements: 
             frame_elements[frame_elements.index(i)] = frame_color + i + PRESETS._reset
 
-        clear()    
+        if not self.printed: clear()
+        if self.printed: ...
+
         #: print at the user position
         #: left part of frame including corners 
         _print_at(self.POS[0],self.POS[1],
@@ -267,19 +275,28 @@ class cli:
             if type(text) == dict: 
                 options = list(text.keys())
                 self.__enum(options, pos)
-                return self.__get_key(text, options)
+                return self.__get_key(text, options, True)
 
             elif type(text) == list:                    # -> check for text definitions
                 for i in range(len(text)):
                     if type(text[i]) == tuple:
                         header, regular, bottom = self.__text(text)          # -> define text types
-                        return self.__place_decorators(header, regular, bottom, pos)
+                        return self.__place_decorators(header, regular, bottom, pos, True)
                     else:
                         self.__enum(text, pos)
-                        return self.__get_key(text, '')
+                        return self.__get_key(text, '', True)
             
             else: raise DATATYPE_ERROR('prettify expected type<dict> or type<list> for cli._write_content(text) but received '+str(type(text))+'!')
 
-        elif is_iterable == False: ...
+        elif is_iterable == False:
+            if self.printed == False:
+                for i in range(len(text)):
+                    if type(text[i]) == tuple:
+                        header, regular, bottom = self.__text(text)          # -> define text types
+                        _print_at(pos[1],pos[0],'\n'.join(text[1][0]))
+                        self.printed = True
+            else: 
+                try: self.__get_key('','', False)
+                except ZeroDivisionError: pass
 
 cli = cli()

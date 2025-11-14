@@ -20,7 +20,7 @@ from core.prettify_err  import DATATYPE_ERROR, WHATTHEFUCK
 
 from core.cli           import cli as PCLI
 from core.cli           import SEQ, CMD, FUL, ITR
-from core.cli           import _NoneType
+from core.cli           import _NoneType, move, _print_at
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 #    PUBLIC FUNCTIONS
@@ -39,10 +39,20 @@ def _typing(item, __type:object, __var) -> Exception | None:
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 #    CLASSES
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+class prettify_print:
+    def __init__(self): ...
+
+    def at(self, x:int, y:int, text:str) -> SEQ:
+        _typing(x, int, 'x')
+        _typing(y, int, 'y')
+        _typing(text, str, 'text')
+        _print_at(y, x, text)
+
 class prettify:
 
     #: core window functions
     __is_iterable = False
+    __show_cursor = True
     __pos         = tuple
 
     #: selection menu
@@ -51,8 +61,8 @@ class prettify:
 
     #: style elements
     __decorators  = list
-    __header      = ''
-    __bottom      = ''
+    __header      = str
+    __bottom      = str
 
     def __init__(self): ...
 
@@ -62,10 +72,13 @@ class prettify:
         PCLI._pos(x, y)
     def iterable_window(self, is_iterable:bool) -> bool:
         _typing(is_iterable, bool, 'is_iterable')
-        self.__is_iterable = is_iterable  
+        self.__is_iterable = is_iterable
+        if is_iterable == False: self.__show_cursor = False
     def add_functions(self, functions:list) -> FUL:
         self.__functions = functions
     def create_window(self, width:int, height:int, frame_style:str, frame_color:str|CMD) -> SEQ:
+        if self.__show_cursor == False: print('\033[?25l', end="")
+        else: ...
         _typing(width, int, 'width')
         _typing(height, int, 'height')
         _typing(frame_style, str, 'frame_style')
@@ -98,17 +111,22 @@ class prettify:
                     self.__functions.append(_NoneType)
                 self.__MENU = dict(zip(text, self.__functions))
 
-            else: raise WHATTHEFUCK('You fucked something up so bad I don\'t even know how to tell you what it is.')
-        else: ...
+            if len(list(self.__MENU.keys())) != 0 and (self.__header != '' or self.__bottom != ''): 
+                PCLI._write_content(
+                    [(self.__header, 'header'), (self.__MENU, 'regular'), (self.__bottom, 'bottom')], 
+                    self.__pos, 
+                    self.__is_iterable)
+            elif len(list(self.__MENU.keys())) != 0:
+                PCLI._write_content(self.__MENU, self.__pos, self.__is_iterable)
+            else:
+                PCLI._write_content(text, self.__pos, self.__is_iterable)
 
-        if len(list(self.__MENU.keys())) != 0 and (self.__header != '' or self.__bottom != ''): 
-            PCLI._write_content(
-                [(self.__header, 'header'), (self.__MENU, 'regular'), (self.__bottom, 'bottom')], 
-                self.__pos, 
-                self.__is_iterable)
-        elif len(list(self.__MENU.keys())) != 0:
-            PCLI._write_content(self.__MENU, self.__pos, self.__is_iterable)
-        else:
-            PCLI._write_content(text, self.__pos, self.__is_iterable)
+        if self.__is_iterable == False:
+            if type(self.__header) != type or type(self.__bottom) != type:
+                PCLI._write_content([(self.__header, 'header'), (text, 'regular'), (self.__bottom, 'bottom')], 
+                                    self.__pos, 
+                                    self.__is_iterable)
+            else: return PCLI._write_content(text, self.__pos, self.__is_iterable)
 
-prettify = prettify()
+prettify       = prettify()
+prettify_print = prettify_print()
