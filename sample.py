@@ -37,9 +37,9 @@ prettify_functions = [
 #    PRETTIFY INITIALIZATION
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 prettify.position(3,2)
-prettify.iterable_window(False)
+prettify.iterable_window(True)
 
-prettify.text_padding(13,3)
+prettify.text_padding(13,5)
 prettify.window_header(rgb(255,0,0) + PRESETS.bold + 'test '+rgb(100,255,0)+'header' + PRESETS._reset)
 prettify.window_bottom(rgb(122, 122, 122) + "Press 'q' to exit!" + PRESETS._reset)
 

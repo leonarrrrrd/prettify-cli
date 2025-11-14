@@ -161,7 +161,7 @@ class cli:
             else:
                 print(_opts)    
 
-    def __get_key(self, text, options, *itr) -> KEY | None | FUN:
+    def __get_key(self, text, options, itr) -> KEY | None | FUN:
         #: engage key listener
         key = key_listener()
             #: listen to key hits
@@ -206,9 +206,6 @@ class cli:
         #: place subtext
         move(self.POS[0] + self.HI_FRAME + 2, self.POS[1] + 1)
         print(bottom[0])
-
-        if itr == False:
-            _print_at(pos[1], pos[0],'\n'.join(regular[0]))
 
         if type(regular[0]) == list and itr == True:
             self.__enum(regular[0], pos)
@@ -293,7 +290,16 @@ class cli:
                 for i in range(len(text)):
                     if type(text[i]) == tuple:
                         header, regular, bottom = self.__text(text)          # -> define text types
-                        _print_at(pos[1],pos[0],'\n'.join(text[1][0]))
+                        frame_pad = (self.LEN_FRAME - 2 - len(header[0])) // 2
+
+                        #: place header
+                        _print_at(self.POS[0] + 1, self.POS[1] + 1,
+                            f"{(' ' * frame_pad)+' '}{header[0]}{' ' * (self.LEN_FRAME - 2 - len(header[0]) - frame_pad)}")
+                        #: place subtext
+                        _print_at(self.POS[0] + self.HI_FRAME + 2, self.POS[1] + 1, 
+                                  bottom[0])
+
+                        _print_at(pos[1],pos[0],'\n'.join(regular[0]))
                         self.printed = True
             else: 
                 try: self.__get_key('','', False)
